@@ -1,0 +1,30 @@
+{
+  "name": "diff-to-index",
+  "version": "0.0.1",
+  "description": "Convert a diff statements from a data model to updates on an index, such as an ElasticSearch database.",
+  "main": "index.js",
+  "scripts": {
+    "lint": "tslint -p tsconfig.json",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/deep-diff": "^1.0.0",
+    "tslint": "^5.19.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wasteiq/diff-to-index.git"
+  },
+  "keywords": [
+    "deep-diff",
+    "index",
+    "elasticsearch"
+  ],
+  "author": "tvedtorama",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/wasteiq/diff-to-index/issues"
+  },
+  "homepage": "https://github.com/wasteiq/diff-to-index#readme"
+}
