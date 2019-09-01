@@ -10,7 +10,8 @@
   "dependencies": {},
   "devDependencies": {
     "@types/deep-diff": "^1.0.0",
-    "tslint": "^5.19.0"
+    "tslint": "^5.19.0",
+    "typescript": "^3.6.2"
   },
   "repository": {
     "type": "git",
