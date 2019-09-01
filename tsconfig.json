@@ -10,7 +10,7 @@
         "skipLibCheck": true,
         "experimentalDecorators": true,
         "rootDir": ".",
-        "outDir": "build"
+        "outDir": "lib"
     },
     "filesGlob": [
         "!./node_modules/**"

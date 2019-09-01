@@ -1,8 +1,7 @@
-build
+lib
 typings
 node_modules
 build_node_modules
-testBuild
 .idea
 dist
 .env
