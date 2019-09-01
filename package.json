@@ -2,7 +2,8 @@
   "name": "diff-to-index",
   "version": "0.0.1",
   "description": "Convert a diff statements from a data model to updates on an index, such as an ElasticSearch database.",
-  "main": "index.js",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
     "lint": "tslint -p tsconfig.json",
     "test": "echo \"Error: no test specified\" && exit 1"
