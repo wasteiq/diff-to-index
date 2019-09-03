@@ -7,12 +7,16 @@ should()
 
 describe("index", () => {
 	// Variants: when the item is null (needed when sorting - use "NULL")
-	(["add records", "modify records"] as const).forEach(variant =>
+	(["add records", "modify records", "delete records", "add records with null value"] as const).forEach(variant =>
 	it(`should ${variant}`, () => {
-		const items = variant === "add records" ? {} : {pk: {name: "hallo", otherThings: "bad"}}
-		const newItems = {pk: {name: "hei", otherThings: "bad"}}
+		const items = variant === "modify records" ? {pk: {name: "hallo", otherThings: "bad"}} : {}
+		const newItems = {pk: variant === "add records with null value" ?
+			{this_one: "got no name"} :
+			{name: "hei", otherThings: "bad"}}
 
-		const diffie = Iterable.from(diff(items, newItems) || [])
+		const diffie = Iterable.from(diff(...(<[any, any]>(variant === "delete records" ?
+						[newItems, items] :
+						[items, newItems]))) || [])
 
 		const config: IIndexConfig[] = [{
 			collection: "horrors",
@@ -27,11 +31,15 @@ describe("index", () => {
 		const result = createIndexChanges("horrors", diffie, config)
 
 		result.should.have.length(1)
-		result.should.deep.equal([{
-			type: variant === "add records" ? "ADD" : "UPDATE",
+		result.should.deep.equal([variant === "delete records" ? {
+			type: "DELETE",
+			pk: "pk",
+			index: "horror_name"
+		} : {
+			type: variant === "modify records" ? "UPDATE" : "ADD",
 			pk: "pk",
 			index: "horror_name",
-			columns: {name: "hei"},
+			columns: {name: variant === "add records with null value" ? null : "hei"},
 		}])
 	}))
 

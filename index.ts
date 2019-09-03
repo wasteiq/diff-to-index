@@ -1,6 +1,6 @@
-import {Diff, DiffNew} from 'deep-diff'
+import {Diff, DiffNew, DiffDeleted} from 'deep-diff'
 import {Iterable} from '@reactivex/ix-es5-cjs'
-import {Some} from 'monet'
+import {Some, Maybe} from 'monet'
 import {value as jpValueQuery} from 'jsonpath'
 
 export const letsMakeThisAnExample = (a: string) => `hello ${a}`
@@ -8,7 +8,8 @@ export const letsMakeThisAnExample = (a: string) => `hello ${a}`
 
 type IChangeAddOrUpdate = {type: "ADD" | "UPDATE", pk: string, columns: {[index: string]: any}}
 type IChangeDelete = {type: "DELETE", pk: string}
-type IChange = (IChangeAddOrUpdate | IChangeDelete) & {index: string}
+type IChangeAddOrUpdateOrDelete = IChangeAddOrUpdate | IChangeDelete
+type IChange = IChangeAddOrUpdateOrDelete & {index: string}
 
 export interface IIndexConfig {
 	collection: string
@@ -24,6 +25,7 @@ const remainingPathToQuery = (pathA: any[], pathB: any[]) =>
 		orSome("$")
 
 const addOrEditKinds: Diff<any>["kind"][] = ["N", "E"]
+const deleteKinds: Diff<any>["kind"][] = ["D"]
 
 const joinAndFilter = (diffs: Iterable<Diff<any>>, appIndices: IIndexConfig[]): Iterable<IChange[]> =>
 	diffs.map(diff =>
@@ -35,28 +37,44 @@ const joinAndFilter = (diffs: Iterable<Diff<any>>, appIndices: IIndexConfig[]): 
 				})).
 				map(({diff, pk, path: diffPath}) =>
 					appIndices.
-						filter(({path: indexPath}) => addOrEditKinds.includes(diff.kind) && inPath(diffPath, indexPath)).
-						map(({path: indexPath, index}) => ({
-							indexPath,
-							index,
-							key: indexPath[indexPath.length - 1],
-							diff: <DiffNew<any>>diff,
-						})).
-						map(({indexPath, index, key, diff}) => (<IChange>{
-							...<IChangeAddOrUpdate>{
-								type: diff.kind === "N" ? "ADD" : "UPDATE",
-								pk,
-								columns: {
-									[key]: Some(remainingPathToQuery(diffPath, indexPath)).
-										filter(query => query !== "$").
-										map(query => jpValueQuery(diff.rhs, query)).
-										orSome(diff.rhs)
+						map(({path: indexPath, index}) =>
+							Maybe.fromFalsy(addOrEditKinds.includes(diff.kind) && inPath(diffPath, indexPath) &&
+								{indexPath, index, diff: <DiffNew<any>>diff} || null).
+// 						filter(({path: indexPath}) => addOrEditKinds.includes(diff.kind) && inPath(diffPath, indexPath)).
+							map(({indexPath, index, diff}) => ({
+								indexPath,
+								index,
+								key: indexPath[indexPath.length - 1],
+								diff,
+							})).
+							map<IChangeAddOrUpdateOrDelete>(({indexPath, key, diff}) => <IChangeAddOrUpdate>{
+									type: diff.kind === "N" ? "ADD" : "UPDATE",
+									pk,
+									columns: {
+										[key]: Some(remainingPathToQuery(diffPath, indexPath)).
+											filter(query => query !== "$").
+											flatMap(query => Maybe.
+												fromUndefined(jpValueQuery(diff.rhs, query)).
+												map(value => ({value})).
+												catchMap(() => Some({value: null}))).
+											orSome({value: diff.rhs}).value
+									}
 								}
-							},
-							...{
-								index
-							}
-						}))).
+							).
+							catchMap(() => Maybe.fromFalsy(deleteKinds.includes(diff.kind) && inPath(diffPath, indexPath) &&
+												{
+													indexPath,
+													index,
+													diff: <DiffDeleted<any>>diff
+												} || null).
+									map(() => <IChangeDelete>{
+										type: "DELETE",
+										pk,
+									})
+								).
+							map(thing => <IChange>{...thing, index}).
+							orSome(null as any)
+						)).
 				some())
 
 
