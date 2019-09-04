@@ -34,7 +34,7 @@ const remainingPathToQuery = (pathA: any[], pathB: any[]) =>
 const addOrEditKinds: Diff<any>["kind"][] = ["N", "E"]
 const deleteKinds: Diff<any>["kind"][] = ["D"]
 
-const joinAndFilter = (diffs: Iterable<Diff<any>>, appIndices: IIndexConfig[]): Iterable<IChange[]> =>
+const joinAndFilter = (diffs: Iterable<Diff<any>>, appIndices: IIndexConfig[]): Iterable<IChange[][]> =>
 	diffs.map(diff =>
 			Some(({diff, path: Iterable.from(diff.path || [])})).
 				map(({diff, path}) => Some([...path.skip(1)]).
@@ -60,7 +60,7 @@ const joinAndFilter = (diffs: Iterable<Diff<any>>, appIndices: IIndexConfig[]): 
 									columnKey: Maybe.fromUndefined(Iterable.from(indexPath).filter(x => x !== "*").last()).orSome("UNKNOWN"),
 									index,
 									diff: <DiffNew<any>>diff} || null).
-							map<IChangeAddOrUpdateOrDelete>(({indexPath, columnKey, diff}) => <IChangeAddOrUpdate>{
+							map<IChangeAddOrUpdateOrDelete[]>(({indexPath, columnKey, diff}) => [<IChangeAddOrUpdate>{
 									type: diff.kind === "N" ? "ADD" : "UPDATE",
 									pk,
 									columns: {
@@ -73,7 +73,7 @@ const joinAndFilter = (diffs: Iterable<Diff<any>>, appIndices: IIndexConfig[]): 
 											orSome({value: diff.rhs}).value,
 									},
 									...(arrayIdx > -1 ? {arrayIdx} : {}),
-								}
+								}]
 							).
 							catchMap(() => Maybe.fromFalsy(deleteKinds.includes(diff.kind) && inPath(diffPath, indexPath) &&
 												{
@@ -81,15 +81,15 @@ const joinAndFilter = (diffs: Iterable<Diff<any>>, appIndices: IIndexConfig[]): 
 													index,
 													diff: <DiffDeleted<any>>diff
 												} || null).
-									map(() => <IChangeDelete>{
+									map(() => [<IChangeDelete>{
 										// Note: If path is longer than just the PK, this might actually be an update of the field, to null
 										type: "DELETE",
 										pk,
 										...(arrayIdx > -1 ? {arrayIdx} : {}),
-									})
+									}])
 								).
-							map(thing => <IChange>{...thing, index}).
-							orSome(null as any)
+							map(things => things.map(thing => (<IChange>{...thing, index}))).
+							orSome([])
 						)).
 				some())
 
@@ -100,6 +100,6 @@ export const createIndexChanges = (collection: string, diffs: Iterable<Diff<any>
 		map(appIndices =>
 			[...joinAndFilter(diffs, appIndices).
 				flatMap(x => x).
-				filter(x => x ? true : false)] // huge loss here as iterableX.flatten does not work nicely, typewise
+				flatMap(x => x)]
 		).
 		orSome([])
