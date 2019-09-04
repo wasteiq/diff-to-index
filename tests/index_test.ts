@@ -116,5 +116,6 @@ describe("index", () => {
 				index: "points_pri",
 				arrayIdx: 0,
 			} : {}])
-		}))
+	}));
+
 })
