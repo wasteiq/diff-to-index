@@ -47,7 +47,7 @@ const joinAndFilter = (diffs: Iterable<Diff<any>>, appIndices: IIndexConfig[]): 
 						} : {
 							// Note: Might still be an array edit, if last part of the path is a number
 							diff,
-							arrayIdx: Maybe.fromUndefined(<number>corePath[corePath.length - 1]).filter(x => typeof x === "number").orSome(-1),
+							arrayIdx: Maybe.fromUndefined(Iterable.from(corePath).reverse().filter(x => typeof x === "number").map(x => <number>x).first()).orSome(-1),
 							path: corePath,
 						})
 					})).
@@ -98,6 +98,8 @@ export const createIndexChanges = (collection: string, diffs: Iterable<Diff<any>
 	Some(indices.filter(x => x.collection === collection)).
 		filter(appIndices => appIndices.length ? true : false).
 		map(appIndices =>
-			[...joinAndFilter(diffs, appIndices).flatMap(x => x)] // huge loss here as iterableX.flatten does not work nicely, typewise
+			[...joinAndFilter(diffs, appIndices).
+				flatMap(x => x).
+				filter(x => x ? true : false)] // huge loss here as iterableX.flatten does not work nicely, typewise
 		).
 		orSome([])

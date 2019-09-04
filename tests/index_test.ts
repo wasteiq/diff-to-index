@@ -78,5 +78,43 @@ describe("index", () => {
 			index: "horror_name",
 			arrayIdx: 1,
 		}])
-	}))
+	}));
+
+	(["adds", "updates", "delete"] as const).forEach(variant =>
+		it(`should deal with ${variant} in complex arrays`, () => {
+			const items = {pok: {points: [{pri: 1, point: "abc"}]}}
+			// Note: an unrelated change is taking place here, point[0]: "abc" => "fff"
+			const newItems = {pok: {points: [...(variant === "adds" ? [{pri: 1, point: "fff"}] : []),
+				...(variant === "delete" ? [] : [{pri: 3, point: "xyz"}])]}}
+
+			const diffie = Iterable.from(diff(items, newItems) || [])
+
+			const config: IIndexConfig[] = [{
+				collection: "horrors",
+				index: "points_pri",
+				path: ["points", "*", "pri"],
+			}]
+
+			const result = createIndexChanges("horrors", diffie, config)
+
+			result.should.have.length(1)
+			result.should.deep.equal([variant === "adds" ? {
+				type: "ADD",
+				pk: "pok",
+				index: "points_pri",
+				arrayIdx: 1,
+				columns: {pri: 3},
+			} : variant === "updates" ? {
+				type: "UPDATE",
+				pk: "pok",
+				index: "points_pri",
+				arrayIdx: 0,
+				columns: {pri: 3},
+			} : variant === "delete" ? {
+				type: "DELETE",
+				pk: "pok",
+				index: "points_pri",
+				arrayIdx: 0,
+			} : {}])
+		}))
 })
