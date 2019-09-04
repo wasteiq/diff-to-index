@@ -41,10 +41,42 @@ describe("index", () => {
 			index: "horror_name",
 			columns: {name: variant === "add records with null value" ? null : "hei"},
 		}])
-	}))
+	}));
 
 	// Variants goes here, add, remove, replace
-	it("should deal with arrays adds in arrays", () => {
+	(["adds", "replaces", "deletes"] as const).forEach(variant =>
+	it(`should deal with ${variant} in simple arrays`, () => {
+		const items = {pok: {things: ["10", "20"]}}
+		const newItems = {pok: {things: ["10", ...(variant === "adds" ? ["20"] : []), ...(variant !== "deletes" ? ["30"] : [])]}}
 
-	})
+		const diffie = Iterable.from(diff(items, newItems) || [])
+
+		const config: IIndexConfig[] = [{
+			collection: "horrors",
+			index: "horror_name",
+			path: ["things", "*"],
+		}]
+
+		const result = createIndexChanges("horrors", diffie, config)
+
+		result.should.have.length(1)
+		result.should.deep.equal([variant === "adds" ? {
+			type: "ADD",
+			pk: "pok",
+			index: "horror_name",
+			arrayIdx: 2,
+			columns: {things: "30"},
+		} : variant === "replaces" ? {
+			type: "UPDATE",
+			pk: "pok",
+			index: "horror_name",
+			arrayIdx: 1,
+			columns: {things: "30"},
+		} : {
+			type: "DELETE",
+			pk: "pok",
+			index: "horror_name",
+			arrayIdx: 1,
+		}])
+	}))
 })
