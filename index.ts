@@ -38,15 +38,11 @@ const joinAndFilter = (diffs: Iterable<Diff<any>>, appIndices: IIndexConfig[]): 
 				map(({diff, pk, path: diffPath}) =>
 					appIndices.
 						map(({path: indexPath, index}) =>
-							Maybe.fromFalsy(addOrEditKinds.includes(diff.kind) && inPath(diffPath, indexPath) &&
-								{indexPath, index, diff: <DiffNew<any>>diff} || null).
-// 						filter(({path: indexPath}) => addOrEditKinds.includes(diff.kind) && inPath(diffPath, indexPath)).
-							map(({indexPath, index, diff}) => ({
+							Maybe.fromFalsy(addOrEditKinds.includes(diff.kind) && inPath(diffPath, indexPath) && {
 								indexPath,
+									key: indexPath[indexPath.length - 1],
 								index,
-								key: indexPath[indexPath.length - 1],
-								diff,
-							})).
+									diff: <DiffNew<any>>diff} || null).
 							map<IChangeAddOrUpdateOrDelete>(({indexPath, key, diff}) => <IChangeAddOrUpdate>{
 									type: diff.kind === "N" ? "ADD" : "UPDATE",
 									pk,
