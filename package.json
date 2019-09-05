@@ -5,8 +5,11 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
+    "build": "tsc --skipLibCheck",
+    "test": "TS_NODE_TRANSPILE_ONLY=true mocha --require ts-node/register $(find tests -name '*[!d.].ts') --reporter landing",
     "lint": "tslint -p tsconfig.json",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "prepare": "npm run build",
+    "prepublishOnly": "npm test && npm run lint"
   },
   "dependencies": {
     "@reactivex/ix-es5-cjs": "^2.5.3",
@@ -31,7 +34,7 @@
   },
   "keywords": [
     "deep-diff",
-    "index",
+    "indexing",
     "elasticsearch"
   ],
   "author": "tvedtorama",
