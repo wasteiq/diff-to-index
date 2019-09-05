@@ -9,7 +9,7 @@ export const letsMakeThisAnExample = (a: string) => `hello ${a}`
 type IArrayIndex = {arrayIdx?: number}
 type IPK = {pk: string}
 type IChangeAddOrUpdate = IPK & {type: "ADD" | "UPDATE", columns: {[index: string]: any}} & Partial<IArrayIndex>
-type IChangeDelete = IPK & {type: "DELETE"} & Partial<IArrayIndex>
+type IChangeDelete = IPK & {type: "DELETE", allArrayIndices?: true} & Partial<IArrayIndex>
 type IChangeAddOrUpdateOrDelete = IChangeAddOrUpdate | IChangeDelete
 export type IChange = IChangeAddOrUpdateOrDelete & {index: string}
 
@@ -26,13 +26,22 @@ export interface IIndexConfig {
 
 /** Wether `pathA` is part of `pathB`, where stars in `pathB` matches anything in `pathA` */
 const inPath = (pathA: any[], pathB: any[]) => pathA.find((x, i) => (pathB.length <= i || (pathB[i] !== "*" && x !== pathB[i]))) ? false : true
+
+const remainingPath = (pathA: any[], pathB: any[]) =>
+	Some(pathB.slice(pathA.length))
+
+const areThereArraysDownTheLine = (pathA: any[], pathB: any[]) =>
+	remainingPath(pathA, pathB).
+		map(rem => rem.includes("*")).
+		orSome(false)
+
 /** Returns a jsonQuery for the part of `pathB` that are remaining after
  * pathA has been substracted (assumed to be selected already).
  *
  * Stops at the first star, and returns the path so far, as the client is assumed to resolve arrays before continuing.
  */
 const remainingPathToQuery = (pathA: any[], pathB: any[]) =>
-	Some(pathB.slice(pathA.length)).
+	remainingPath(pathA, pathB).
 		map(remaining => remaining.slice(0, Some(remaining.indexOf("*")).map(idx => idx === -1 ? {} : {i: idx + 1}).some().i)).
 		map(remaining => ({
 			query: Maybe.fromFalsy(remaining.length ? true : false).
@@ -114,9 +123,10 @@ const joinAndFilter = (diffs: Iterable<Diff<any>>, appIndices: IIndexConfig[]): 
 													diff: <DiffDeleted<any>>diff
 												} || null).
 									map(() => [<IChangeDelete>{
-										// Note: If path is longer than just the PK, this might actually be an update of the field, to null
+										// Note: If path is longer than just the PK, this might actually be an update of the field, to `null`
 										type: "DELETE",
 										pk,
+										...(areThereArraysDownTheLine(diffPath, indexPath) ? {allArrayIndices: true} : {}),
 										...<IArrayIndex>(arrayIdx > -1 ? {arrayIdx} : {}),
 									}])
 								).

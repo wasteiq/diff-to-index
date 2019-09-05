@@ -155,6 +155,7 @@ describe("index", () => {
 			// NB: All arrayIdx entries on PK must be deleted when there is no arrayIdx present
 			type: "DELETE",
 			pk: "pok",
+			allArrayIndices: true,
 			index: "points_pri",
 		}] : [])
 	}));
