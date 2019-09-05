@@ -10,7 +10,7 @@ export const letsMakeThisAnExample = (a: string) => `hello ${a}`
 type IChangeAddOrUpdate = {type: "ADD" | "UPDATE", pk: string, columns: {[index: string]: any}}
 type IChangeDelete = {type: "DELETE", pk: string}
 type IChangeAddOrUpdateOrDelete = IChangeAddOrUpdate | IChangeDelete
-type IChange = IChangeAddOrUpdateOrDelete & {index: string}
+export type IChange = IChangeAddOrUpdateOrDelete & {index: string}
 
 export interface IIndexConfig {
 	collection: string

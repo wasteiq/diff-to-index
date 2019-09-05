@@ -1,6 +1,6 @@
 {
   "name": "diff-to-index",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Convert a diff statements from a data model to updates on an index, such as an ElasticSearch database.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
