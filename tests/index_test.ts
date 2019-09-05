@@ -1,5 +1,5 @@
 import {should} from 'chai'
-import { createIndexChanges, IIndexConfig } from '../index';
+import { createIndexChanges, IIndexConfig, findItems } from '../index';
 import { diff } from 'deep-diff';
 import { Iterable } from '@reactivex/ix-es5-cjs';
 
@@ -81,41 +81,130 @@ describe("index", () => {
 	}));
 
 	(["adds", "updates", "delete"] as const).forEach(variant =>
-		it(`should deal with ${variant} in complex arrays`, () => {
-			const items = {pok: {points: [{pri: 1, point: "abc"}]}}
-			// Note: an unrelated change is taking place here, point[0]: "abc" => "fff"
-			const newItems = {pok: {points: [...(variant === "adds" ? [{pri: 1, point: "fff"}] : []),
-				...(variant === "delete" ? [] : [{pri: 3, point: "xyz"}])]}}
+	it(`should deal with ${variant} in complex arrays`, () => {
+		const items = {pok: {points: [{pri: 1, point: "abc"}]}}
+		// Note: an unrelated change is taking place here, point[0]: "abc" => "fff"
+		const newItems = {pok: {points: [...(variant === "adds" ? [{pri: 1, point: "fff"}] : []),
+			...(variant === "delete" ? [] : [{pri: 3, point: "xyz"}])]}}
 
-			const diffie = Iterable.from(diff(items, newItems) || [])
+		const diffie = Iterable.from(diff(items, newItems) || [])
 
-			const config: IIndexConfig[] = [{
-				collection: "horrors",
-				index: "points_pri",
-				path: ["points", "*", "pri"],
-			}]
+		const config: IIndexConfig[] = [{
+			collection: "horrors",
+			index: "points_pri",
+			path: ["points", "*", "pri"],
+		}]
 
-			const result = createIndexChanges("horrors", diffie, config)
+		const result = createIndexChanges("horrors", diffie, config)
 
-			result.should.have.length(1)
-			result.should.deep.equal([variant === "adds" ? {
-				type: "ADD",
-				pk: "pok",
-				index: "points_pri",
-				arrayIdx: 1,
-				columns: {pri: 3},
-			} : variant === "updates" ? {
-				type: "UPDATE",
-				pk: "pok",
-				index: "points_pri",
-				arrayIdx: 0,
-				columns: {pri: 3},
-			} : variant === "delete" ? {
-				type: "DELETE",
-				pk: "pok",
-				index: "points_pri",
-				arrayIdx: 0,
-			} : {}])
+		result.should.have.length(1)
+		result.should.deep.equal([variant === "adds" ? {
+			type: "ADD",
+			pk: "pok",
+			index: "points_pri",
+			arrayIdx: 1,
+			columns: {pri: 3},
+		} : variant === "updates" ? {
+			type: "UPDATE",
+			pk: "pok",
+			index: "points_pri",
+			arrayIdx: 0,
+			columns: {pri: 3},
+		} : variant === "delete" ? {
+			type: "DELETE",
+			pk: "pok",
+			index: "points_pri",
+			arrayIdx: 0,
+		} : {}])
 	}));
 
+	(["adds", "delete"] as const).forEach(variant =>
+	it(`should deal with ${variant} in objects containing arrays`, () => {
+		const items = {}
+		const newItems = {pok: {points: [{pri: 1, point: "fff"}, {pri: 3, point: "xyz"}]}}
+
+		const diffie = Iterable.from((variant === "adds" ? diff<Partial<typeof newItems>>(items, newItems) : diff(newItems, items)) || [])
+
+		const config: IIndexConfig[] = [{
+			collection: "horrors",
+			index: "points_pri",
+			path: ["points", "*", "pri"],
+		}]
+
+		const result = createIndexChanges("horrors", diffie, config)
+
+		//  Two ways to resolve adds:
+		//    * do a new diff of the new object, with an empty array substituting the actual array (hard to build this artifical object)
+		//    * do a query instead of value to find all the items matching (the star), then create one for each
+
+		result.should.deep.equal(variant === "adds" ? [{
+			type: "ADD",
+			pk: "pok",
+			index: "points_pri",
+			arrayIdx: 0,
+			columns: {pri: 1},
+		}, {
+			type: "ADD",
+			pk: "pok",
+			index: "points_pri",
+			arrayIdx: 1,
+			columns: {pri: 3},
+		}] : variant === "delete" ? [{
+			// NB: All arrayIdx entries on PK must be deleted when there is no arrayIdx present
+			type: "DELETE",
+			pk: "pok",
+			index: "points_pri",
+		}] : [])
+	}));
+})
+
+
+describe("findItems	", () => {
+	// Variants: when the item is null (needed when sorting - use "NULL")
+	it(`should find item from current path`, () => {
+		const item = {a: {ho: 10}}
+		const result = findItems(["x"], ["x", "a", "ho"], item)
+		result.should.deep.equal([{value: 10}])
+	})
+
+	it(`should result in [null] when no item is found`, () => {
+		const item = {a: {plo: 10}}
+		const result = findItems(["x"], ["x", "a", "ho"], item)
+		result.should.deep.equal([{value: null}])
+	})
+
+	it(`should find all items in array`, () => {
+		const item = {a: {ho: [10, 20, {thing: 30}]}}
+		const result = findItems(["x"], ["x", "a", "ho", "*"], item)
+		result.should.deep.equal([{value: 10, idx: 0}, {value: 20, idx: 1}, {value: {thing: 30}, idx: 2}])
+	})
+
+	it(`should recurse into array item, when asked to`, () => {
+		const item = {a: {ho: [{thing: 10}, {nothing: 20}, {thing: 30}]}}
+		const result = findItems(["x"], ["x", "a", "ho", "*", "thing"], item)
+		result.should.deep.equal([
+			{value: 10, idx: 0},
+			{value: null, idx: 1}, // No entry found here, so just returns [null]
+			{value: 30, idx: 2}
+		])
+	})
+
+	it(`should recurse into array item, event multiple nested, perhaps crazy deep`, () => {
+		const item = {
+			a: {
+				ho: [
+					{thing: [
+						{homeOfInsane: "galehus"}]},
+					{nothing: 20},
+					{thing: [
+						{homeOfInsane: "insanitus"},
+						{homeOfInsane: "ballaleika"}]}
+			]}}
+		const result = findItems(["x"], ["x", "a", "ho", "*", "thing", "*", "homeOfInsane"], item)
+		result.should.deep.equal([
+			{value: "galehus", idx: 0},
+			{value: null, idx: 1},
+			{value: "insanitus", idx: 2},
+			{value: "ballaleika", idx: 3}]) // This is basically the wrong index for this latest item, should probably also be 2
+	})
 })
