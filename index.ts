@@ -6,9 +6,10 @@ import { map, flatMap } from '@reactivex/ix-es5-cjs/iterable/pipe/index';
 
 export const letsMakeThisAnExample = (a: string) => `hello ${a}`
 
-
-type IChangeAddOrUpdate = {type: "ADD" | "UPDATE", pk: string, columns: {[index: string]: any}}
-type IChangeDelete = {type: "DELETE", pk: string}
+type IArrayIndex = {arrayIdx?: number}
+type IPK = {pk: string}
+type IChangeAddOrUpdate = IPK & {type: "ADD" | "UPDATE", columns: {[index: string]: any}} & Partial<IArrayIndex>
+type IChangeDelete = IPK & {type: "DELETE"} & Partial<IArrayIndex>
 type IChangeAddOrUpdateOrDelete = IChangeAddOrUpdate | IChangeDelete
 export type IChange = IChangeAddOrUpdateOrDelete & {index: string}
 
@@ -103,7 +104,7 @@ const joinAndFilter = (diffs: Iterable<Diff<any>>, appIndices: IIndexConfig[]): 
 									columns: {
 										[columnKey]: value,
 									},
-									...(arrayIdx > -1 ? {arrayIdx} : typeof idx === "number" ? {arrayIdx: idx} : {}),
+									...<IArrayIndex>(arrayIdx > -1 ? {arrayIdx} : typeof idx === "number" ? {arrayIdx: idx} : {}),
 								})
 							).
 							catchMap(() => Maybe.fromFalsy(deleteKinds.includes(diff.kind) && inPath(diffPath, indexPath) &&
@@ -116,7 +117,7 @@ const joinAndFilter = (diffs: Iterable<Diff<any>>, appIndices: IIndexConfig[]): 
 										// Note: If path is longer than just the PK, this might actually be an update of the field, to null
 										type: "DELETE",
 										pk,
-										...(arrayIdx > -1 ? {arrayIdx} : {}),
+										...<IArrayIndex>(arrayIdx > -1 ? {arrayIdx} : {}),
 									}])
 								).
 							map(things => things.map(thing => (<IChange>{...thing, index}))).
