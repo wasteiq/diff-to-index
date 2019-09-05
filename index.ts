@@ -8,8 +8,8 @@ export const letsMakeThisAnExample = (a: string) => `hello ${a}`
 
 type IArrayIndex = {arrayIdx?: number}
 type IPK = {pk: string}
-type IChangeAddOrUpdate = IPK & {type: "ADD" | "UPDATE", columns: {[index: string]: any}} & Partial<IArrayIndex>
-type IChangeDelete = IPK & {type: "DELETE", allArrayIndices?: true} & Partial<IArrayIndex>
+export type IChangeAddOrUpdate = IPK & {type: "ADD" | "UPDATE", columns: {[index: string]: any}} & Partial<IArrayIndex>
+export type IChangeDelete = IPK & {type: "DELETE", allArrayIndices?: true} & Partial<IArrayIndex>
 type IChangeAddOrUpdateOrDelete = IChangeAddOrUpdate | IChangeDelete
 export type IChange = IChangeAddOrUpdateOrDelete & {index: string}
 
