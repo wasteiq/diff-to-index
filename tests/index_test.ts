@@ -8,11 +8,13 @@ should()
 describe("index", () => {
 	// Variants: when the item is null (needed when sorting - use "NULL")
 	(["add records", "modify records", "delete records", "add records with null value"] as const).forEach(variant =>
-	it(`should ${variant}`, () => {
-		const items = variant === "modify records" ? {pk: {name: "hallo", otherThings: "bad"}} : {}
+	(["simple index", "multi level index"] as const).forEach(indexComplexity =>
+	it(`should ${variant}, ${indexComplexity}`, () => {
+		const blockBuilder = (name: string) => indexComplexity === "simple index" ? ({name}) : ({complex: {name}})
+		const items = variant === "modify records" ? {pk: {...blockBuilder("hallo"), otherThings: "bad"}} : {}
 		const newItems = {pk: variant === "add records with null value" ?
 			{this_one: "got no name"} :
-			{name: "hei", otherThings: "bad"}}
+			{...blockBuilder("hei"), otherThings: "bad"}}
 
 		const diffie = Iterable.from(diff(...(<[any, any]>(variant === "delete records" ?
 						[newItems, items] :
@@ -21,7 +23,7 @@ describe("index", () => {
 		const config: IIndexConfig[] = [{
 			collection: "horrors",
 			index: "horror_name",
-			path: ["name"]
+			path: indexComplexity === "simple index" ? ["name"] : ["complex", "name"]
 		}, {
 			collection: "cannibals",
 			index: "other_index",
@@ -41,7 +43,7 @@ describe("index", () => {
 			index: "horror_name",
 			columns: {name: variant === "add records with null value" ? null : "hei"},
 		}])
-	}));
+	})));
 
 	// Variants goes here, add, remove, replace
 	(["adds", "replaces", "deletes"] as const).forEach(variant =>
