@@ -9,7 +9,7 @@
         "strict": true,
     },
     "filesGlob": [
-        "!./node_modules/**"
+        "./index.ts" // Weird, it builds tests anyways...
     ],
     "exclude": [ 
         "node_modules",
