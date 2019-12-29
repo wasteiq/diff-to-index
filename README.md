@@ -8,3 +8,7 @@ Given a configuration of the indexes to build, the library will generate operati
 ```
 npm install diff-to-index
 ```
+
+## Version history
+
+0.0.5 - Improved typing and documentation.  Replaced empty object with null in spread.
