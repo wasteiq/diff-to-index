@@ -1,5 +1,5 @@
 import {should} from 'chai'
-import { createIndexChanges, IIndexConfig, findItems } from '../index';
+import { createIndexChanges, IIndexConfig, findItems, IChange } from '../index';
 import { diff } from 'deep-diff';
 import { Iterable } from '@reactivex/ix-es5-cjs';
 
@@ -136,10 +136,10 @@ describe("index", () => {
 		const result = createIndexChanges("horrors", diffie, config)
 
 		//  Two ways to resolve adds:
-		//    * do a new diff of the new object, with an empty array substituting the actual array (hard to build this artifical object)
+		//    * do a new diff of the new object, with an empty array substituting the actual array (hard to build this artificial object)
 		//    * do a query instead of value to find all the items matching (the star), then create one for each
 
-		result.should.deep.equal(variant === "adds" ? [{
+		result.should.deep.equal(variant === "adds" ? <IChange[]>[{
 			type: "ADD",
 			pk: "pok",
 			index: "points_pri",

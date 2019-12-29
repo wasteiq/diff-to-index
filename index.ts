@@ -2,14 +2,24 @@ import {Diff, DiffNew, DiffDeleted} from 'deep-diff'
 import {Iterable} from '@reactivex/ix-es5-cjs'
 import {Some, Maybe} from 'monet'
 import {query as jpValueQuery} from 'jsonpath'
-import { map, flatMap } from '@reactivex/ix-es5-cjs/iterable/pipe/index';
+import { flatMap } from '@reactivex/ix-es5-cjs/iterable/pipe/index';
 
 export const letsMakeThisAnExample = (a: string) => `hello ${a}`
 
-type IArrayIndex = {arrayIdx?: number}
+type IArrayIndex = {
+	/** The index in the array, if the update is inside an array */
+	arrayIdx: number
+}
 type IPK = {pk: string}
-export type IChangeAddOrUpdate = IPK & {type: "ADD" | "UPDATE", columns: {[index: string]: any}} & Partial<IArrayIndex>
-export type IChangeDelete = IPK & {type: "DELETE", allArrayIndices?: true} & Partial<IArrayIndex>
+export type IChangeAddOrUpdate = IPK & {
+		type: "ADD" | "UPDATE",
+		/** The touched values, typically the index configuration and data will make this an object with a single value.
+		 * See diff-to-index unit tests for examples. */
+		columns: {[index: string]: any}
+	} & Partial<IArrayIndex>
+export type IChangeDelete = IPK & {type: "DELETE",
+	/** `true` if the entire array is wiped */
+	allArrayIndices?: true} & Partial<IArrayIndex>
 type IChangeAddOrUpdateOrDelete = IChangeAddOrUpdate | IChangeDelete
 export type IChange = IChangeAddOrUpdateOrDelete & {index: string}
 
@@ -36,7 +46,7 @@ const areThereArraysDownTheLine = (pathA: any[], pathB: any[]) =>
 		orSome(false)
 
 /** Returns a jsonQuery for the part of `pathB` that are remaining after
- * pathA has been substracted (assumed to be selected already).
+ * pathA has been subtracted (assumed to be selected already).
  *
  * Stops at the first star, and returns the path so far, as the client is assumed to resolve arrays before continuing.
  */
@@ -113,7 +123,7 @@ const joinAndFilter = (diffs: Iterable<Diff<any>>, appIndices: IIndexConfig[]): 
 									columns: {
 										[columnKey]: value,
 									},
-									...<IArrayIndex>(arrayIdx > -1 ? {arrayIdx} : typeof idx === "number" ? {arrayIdx: idx} : {}),
+									...(arrayIdx > -1 ? {arrayIdx} : typeof idx === "number" ? <IArrayIndex>{arrayIdx: idx} : null),
 								})
 							).
 							catchMap(() => Maybe.fromFalsy(deleteKinds.includes(diff.kind) && inPath(diffPath, indexPath) &&
@@ -127,7 +137,7 @@ const joinAndFilter = (diffs: Iterable<Diff<any>>, appIndices: IIndexConfig[]): 
 										type: "DELETE",
 										pk,
 										...(areThereArraysDownTheLine(diffPath, indexPath) ? {allArrayIndices: true} : {}),
-										...<IArrayIndex>(arrayIdx > -1 ? {arrayIdx} : {}),
+										...(arrayIdx > -1 ? <IArrayIndex>{arrayIdx} : null),
 									}])
 								).
 							map(things => things.map(thing => (<IChange>{...thing, index}))).
