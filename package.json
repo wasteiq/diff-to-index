@@ -23,9 +23,9 @@
     "@types/mocha": "^5.2.7",
     "chai": "^4.2.0",
     "deep-diff": "^1.0.2",
-    "mocha": "^6.2.0",
+    "mocha": "^6.2.3",
     "ts-node": "^8.3.0",
-    "tslint": "^5.19.0",
+    "tslint": "^5.20.1",
     "typescript": "^3.6.2"
   },
   "repository": {
